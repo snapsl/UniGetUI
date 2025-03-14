@@ -10,7 +10,7 @@ updates:
           - "*"
   - package-ecosystem: "nuget"
     directories:
-      - "/src/*"
+      - "/src/UniGetUI"
     schedule:
       interval: "weekly"
     groups:
