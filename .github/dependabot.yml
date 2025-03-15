@@ -2,13 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "nuget"
     directories:
-      - "/src/UniGetUI.Interface.BackgroundApi"
-      - "/src/UniGetUI.Interface.Enums"
-      - "/src/UniGetUI.Interface.Telemetry"
-      - "/src/UniGetUI.PAckageEngine.Interfaces"
       - "/src/UniGetUI.PackageEngine.Enums"
-      - "/src/UniGetUI.PackageEngine.Managers.Cargo"
-      - "/src/UniGetUI.PackageEngine.Managers.Chocolatey"
       - "/src/UniGetUI"
     schedule:
       interval: "weekly"
