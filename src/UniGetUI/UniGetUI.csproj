@@ -5,6 +5,8 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Platforms>ARM64;x64</Platforms>
     <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0-windows10.0.26100</TargetFrameworks>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Configurations>Debug;Release</Configurations>
     <OutputType>WinExe</OutputType>
