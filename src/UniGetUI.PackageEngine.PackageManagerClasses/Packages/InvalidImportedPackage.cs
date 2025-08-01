@@ -47,7 +47,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public bool IsUpgradable { get => false; }
 
-        public PackageScope Scope { get => PackageScope.Local; set { } }
+        public string Scope { get => PackageScope.Local; set { } }
 
         public string SourceAsString { get; }
 
@@ -55,7 +55,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public InvalidImportedPackage(SerializableIncompatiblePackage_v1 data, IManagerSource source)
+        public InvalidImportedPackage(SerializableIncompatiblePackage data, IManagerSource source)
         {
             Name = data.Name;
             Id = data.Id.Split('\\')[^1];
@@ -75,14 +75,14 @@ namespace UniGetUI.PackageEngine.PackageClasses
             return Task.CompletedTask;
         }
 
-        public SerializablePackage_v1 AsSerializable()
+        public Task<SerializablePackage> AsSerializableAsync()
         {
             throw new NotImplementedException();
         }
 
-        public SerializableIncompatiblePackage_v1 AsSerializable_Incompatible()
+        public SerializableIncompatiblePackage AsSerializable_Incompatible()
         {
-            return new SerializableIncompatiblePackage_v1
+            return new SerializableIncompatiblePackage
             {
                 Name = Name,
                 Id = Id,
@@ -164,6 +164,11 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public bool NewerVersionIsInstalled()
         {
             return false;
+        }
+
+        public Task<string> GetInstallerFileName()
+        {
+            return Task.FromResult("");
         }
 
         public bool IsUpdateMinor()

@@ -44,6 +44,7 @@
                 StateChanged="ShowRestartBanner"
                 Text="Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity." />
 
+            <UserControl Height="16" />
             <widgets:CheckboxCard
                 CornerRadius="8"
                 ForceInversion="True"
@@ -52,20 +53,19 @@
 
             <UserControl Height="16" />
 
-            <widgets:CheckboxCard
-                x:Name="DisableUniGetUIElevatorToggle"
-                BorderThickness="1,1,1,0"
-                CornerRadius="8"
-                SettingName="DisableUniGetUIElevator"
-                StateChanged="ShowRestartBanner"
-                Text="Enable the new UniGetUI-Branded UAC Elevator" />
-            <!--widgets:CheckboxCard
+            <widgets:SecureCheckboxCard
                 x:Name="UseUserGSudoToggle"
-                CornerRadius="0,0,8,8"
-                SettingName="UseUserGSudo"
+                CornerRadius="8"
+                SettingName="ForceUserGSudo"
                 StateChanged="ShowRestartBanner"
-                Text="Use installed GSudo instead of the bundled one" /-->
+                Text="Use installed GSudo instead of UniGetUI Elevator" />
 
+            <UserControl Height="16" />
+
+            <widgets:CheckboxCard
+                CornerRadius="8"
+                SettingName="DisableNewProcessLineHandler"
+                Text="Enable the new process input handler (StdIn automated closer)" />
             <UserControl Height="16" />
 
             <widgets:CheckboxCard
@@ -91,6 +91,24 @@
                 CornerRadius="8"
                 SettingName="DisableDMWThreadOptimizations"
                 Text="Enable background CPU Usage optimizations (see Pull Request #3278)" />
+
+            <UserControl Height="16" />
+
+            <widgets:CheckboxCard
+                Name="DisableIntegrityChecks"
+                CornerRadius="8"
+                SettingName="DisableIntegrityChecks"
+                Text="Perform integrity checks at startup" />
+
+            <UserControl Height="16" />
+
+            <widgets:CheckboxCard
+                Name="InstallInstalledPackagesBundlesPage"
+                CornerRadius="8"
+                SettingName="InstallInstalledPackagesBundlesPage"
+                Text="When batch installing packages from a bundle, install also packages that are already installed" />
+
+
         </StackPanel>
     </ScrollViewer>
 </Page>

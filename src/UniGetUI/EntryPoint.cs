@@ -1,8 +1,8 @@
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
-using UniGetUI.Core.Tools;
 
 namespace UniGetUI
 {
@@ -54,6 +54,26 @@ namespace UniGetUI
                     int ret = CLIHandler.SetSettingsValue();
                     Environment.Exit(ret);
                 }
+                else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING))
+                {
+                    int ret = CLIHandler.EnableSecureSetting();
+                    Environment.Exit(ret);
+                }
+                else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING))
+                {
+                    int ret = CLIHandler.DisableSecureSetting();
+                    Environment.Exit(ret);
+                }
+                else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING_FOR_USER))
+                {
+                    int ret = CLIHandler.EnableSecureSettingForUser();
+                    Environment.Exit(ret);
+                }
+                else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING_FOR_USER))
+                {
+                    int ret = CLIHandler.DisableSecureSettingForUser();
+                    Environment.Exit(ret);
+                }
                 else
                 {
                     CoreData.WasDaemon = CoreData.IsDaemon = args.Contains(CLIHandler.DAEMON);
@@ -62,7 +82,7 @@ namespace UniGetUI
             }
             catch (Exception e)
             {
-                CoreTools.ReportFatalException(e);
+                CrashHandler.ReportFatalException(e);
             }
         }
 
@@ -95,10 +115,9 @@ namespace UniGetUI
                 // If this is the main instance, start the app
                 if (!isRedirect)
                 {
-                    Microsoft.UI.Xaml.Application.Start((_) =>
+                    Application.Start((_) =>
                     {
-                        DispatcherQueueSynchronizationContext context = new(
-                            DispatcherQueue.GetForCurrentThread());
+                        DispatcherQueueSynchronizationContext context = new(DispatcherQueue.GetForCurrentThread());
                         SynchronizationContext.SetSynchronizationContext(context);
                         var app = new MainApp();
                     });
@@ -106,7 +125,7 @@ namespace UniGetUI
             }
             catch (Exception e)
             {
-                CoreTools.ReportFatalException(e);
+                CrashHandler.ReportFatalException(e);
             }
         }
 
@@ -126,7 +145,7 @@ namespace UniGetUI
                 {
                     keyInstance.Activated += async (_, e) =>
                     {
-                        if (MainApp.Current is MainApp baseInstance)
+                        if (Application.Current is MainApp baseInstance)
                         {
                             await baseInstance.ShowMainWindowFromRedirectAsync(e);
                         }

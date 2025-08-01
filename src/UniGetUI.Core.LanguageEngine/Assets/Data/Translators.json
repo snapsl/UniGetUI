@@ -1,5 +1,10 @@
 {
-  "af": [],
+  "af": [
+    {
+      "name": "Hendrik Bezuidenhout",
+      "link": ""
+    }
+  ],
   "ar": [
     {
       "name": "Abdu11ahAS",
@@ -8,6 +13,10 @@
     {
       "name": "Abdullah-Dev115",
       "link": "https://github.com/Abdullah-Dev115"
+    },
+    {
+      "name": "AbdullahAlousi",
+      "link": "https://github.com/AbdullahAlousi"
     },
     {
       "name": "bassuny3003",
@@ -22,8 +31,18 @@
       "link": "https://github.com/FancyCookin"
     },
     {
+      "name": "IFrxo",
+      "link": "https://github.com/IFrxo"
+    },
+    {
       "name": "mo9a7i",
       "link": "https://github.com/mo9a7i"
+    }
+  ],
+  "be": [
+    {
+      "name": "bthos",
+      "link": "https://github.com/bthos"
     }
   ],
   "bg": [
@@ -174,6 +193,10 @@
   ],
   "en": [
     {
+      "name": "lucadsign",
+      "link": "https://github.com/lucadsign"
+    },
+    {
       "name": "marticliment",
       "link": "https://github.com/marticliment"
     },
@@ -220,6 +243,7 @@
       "link": "https://github.com/uKER"
     }
   ],
+  "es-MX": [],
   "et": [
     {
       "name": "artjom3729",
@@ -228,28 +252,8 @@
   ],
   "fa": [
     {
-      "name": "Imorate",
-      "link": "https://github.com/Imorate"
-    },
-    {
-      "name": "itsarian",
-      "link": "https://github.com/itsarian"
-    },
-    {
-      "name": "Mahdi-Hazrati",
-      "link": "https://github.com/Mahdi-Hazrati"
-    },
-    {
-      "name": "moon24-s",
-      "link": "https://github.com/moon24-s"
-    },
-    {
-      "name": "saeed205",
-      "link": "https://github.com/saeed205"
-    },
-    {
-      "name": "smsi2001",
-      "link": "https://github.com/smsi2001"
+      "name": "MobinMardi",
+      "link": "https://github.com/MobinMardi"
     }
   ],
   "fi": [
@@ -290,6 +294,7 @@
       "link": "https://github.com/W1L7dev"
     }
   ],
+  "gl": [],
   "gu": [],
   "he": [
     {
@@ -317,6 +322,10 @@
   ],
   "hr": [
     {
+      "name": "AndrejFeher",
+      "link": "https://github.com/AndrejFeher"
+    },
+    {
       "name": "Stjepan Treger",
       "link": ""
     }
@@ -328,6 +337,10 @@
     }
   ],
   "id": [
+    {
+      "name": "agrinfauzi",
+      "link": "https://github.com/agrinfauzi"
+    },
     {
       "name": "arthackrc",
       "link": "https://github.com/arthackrc"
@@ -371,6 +384,10 @@
     {
       "name": "anmoti",
       "link": "https://github.com/anmoti"
+    },
+    {
+      "name": "BHCrusher1",
+      "link": "https://github.com/BHCrusher1"
     },
     {
       "name": "nob-swik",
@@ -476,6 +493,10 @@
       "link": "https://github.com/CateyeNL"
     },
     {
+      "name": "mia-riezebos",
+      "link": "https://github.com/mia-riezebos"
+    },
+    {
       "name": "Stephan-P",
       "link": "https://github.com/Stephan-P"
     }
@@ -492,6 +513,14 @@
       "link": "https://github.com/GrzegorzKi"
     },
     {
+      "name": "ikarmus2001",
+      "link": "https://github.com/ikarmus2001"
+    },
+    {
+      "name": "juliazero",
+      "link": "https://github.com/juliazero"
+    },
+    {
       "name": "KamilZielinski",
       "link": "https://github.com/KamilZielinski"
     },
@@ -502,6 +531,10 @@
     {
       "name": "RegularGvy13",
       "link": "https://github.com/RegularGvy13"
+    },
+    {
+      "name": "szumsky",
+      "link": "https://github.com/szumsky"
     },
     {
       "name": "ThePhaseless",
@@ -532,6 +565,10 @@
   ],
   "pt_PT": [
     {
+      "name": "100Nome",
+      "link": "https://github.com/100Nome"
+    },
+    {
       "name": "PoetaGA",
       "link": "https://github.com/PoetaGA"
     },
@@ -548,6 +585,10 @@
     {
       "name": "David735453",
       "link": "https://github.com/David735453"
+    },
+    {
+      "name": "lucadsign",
+      "link": "https://github.com/lucadsign"
     },
     {
       "name": "SilverGreen93",
@@ -577,10 +618,6 @@
     },
     {
       "name": "Gleb Saygin",
-      "link": ""
-    },
-    {
-      "name": "Ilia Petrov",
       "link": ""
     },
     {
@@ -660,6 +697,10 @@
     {
       "name": "kakmonster",
       "link": "https://github.com/kakmonster"
+    },
+    {
+      "name": "umeaboy",
+      "link": "https://github.com/umeaboy"
     }
   ],
   "tg": [
@@ -682,8 +723,16 @@
       "link": "https://github.com/dulapahv"
     },
     {
+      "name": "hanchain",
+      "link": "https://github.com/hanchain"
+    },
+    {
       "name": "rikoprushka",
       "link": "https://github.com/rikoprushka"
+    },
+    {
+      "name": "vestearth",
+      "link": "https://github.com/vestearth"
     }
   ],
   "tr": [
@@ -701,6 +750,10 @@
     }
   ],
   "ua": [
+    {
+      "name": "Alex Logvin",
+      "link": ""
+    },
     {
       "name": "Artem Moldovanenko",
       "link": ""

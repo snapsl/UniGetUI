@@ -93,4 +93,24 @@ namespace UniGetUI.Interface.Enums
         public const string UpdateAllPackages = "updateAll";
         public const string ReleaseSelfUpdateLock = "releaseSelfUpdateLock";
     }
+
+    public struct BundleReportEntry
+    {
+        public readonly string Line;
+        public readonly bool Allowed;
+
+        public BundleReportEntry(string line, bool allowed)
+        {
+            Line = line;
+            Allowed = allowed;
+        }
+    }
+
+    public struct BundleReport
+    {
+        public bool IsEmpty = false;
+        public Dictionary<string, List<BundleReportEntry>> Contents = new();
+        public BundleReport()
+        {}
+    }
 }

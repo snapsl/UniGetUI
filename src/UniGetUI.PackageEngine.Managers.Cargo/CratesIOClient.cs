@@ -38,7 +38,7 @@ internal record CargoManifestVersion
 {
     public string[]? bin_names { get; init; }
     public required string checksum { get; init; }
-    public double? crate_size { get; init; }
+    public long? crate_size { get; init; }
     public string? created_at { get; init; }
     public required string dl_path { get; init; }
     public string? license { get; init; }
@@ -93,7 +93,7 @@ internal class CratesIOClient
 
         var manifestStr = client.GetStringAsync(url).GetAwaiter().GetResult();
 
-        var manifest = JsonSerializer.Deserialize<T>(manifestStr, options: CoreData.SerializingOptions)
+        var manifest = JsonSerializer.Deserialize<T>(manifestStr, options: SerializationHelpers.DefaultOptions)
                        ?? throw new NullResponseException($"Null response for request to {url}");
         return manifest;
     }

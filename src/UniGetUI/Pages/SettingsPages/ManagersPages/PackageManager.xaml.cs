@@ -21,6 +21,7 @@ using UniGetUI.Interface.Widgets;
 using UniGetUI.Core.Data;
 using UniGetUI.Pages.DialogPages;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.SettingsEngine.SecureSettings;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -37,7 +38,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         public event EventHandler<Type>? NavigationRequested;
         public event EventHandler? ReapplyProperties;
         public bool CanGoBack => true;
-        public string ShortTitle => Manager is null? "": CoreTools.Translate("{0} settings", Manager.DisplayName);
+        public string ShortTitle => Manager is null ? "" : CoreTools.Translate("{0} settings", Manager.DisplayName);
 
         public PackageManagerPage()
         {
@@ -67,43 +68,58 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             LongVersionTextBlock.Text = Manager.Status.Version + "\n";
             SetManagerStatus(false);
 
-            LocationLabel.Text = Manager.Status.ExecutablePath + Manager.Properties.ExecutableCallArgs;
+            LocationLabel.Text = Manager.Status.ExecutablePath + " " + Manager.Status.ExecutableCallArgs.Trim();
             if (LocationLabel.Text == "") LocationLabel.Text = CoreTools.Translate("The executable file for {0} was not found", Manager.DisplayName);
-            EnableManager.SettingName = Manager.Name;
+            EnableManager.KeyName = Manager.Name;
             EnableManager.Text = CoreTools.Translate("Enable {pm}").Replace("{pm}", Manager.DisplayName);
+            InstallOptionsTitle.Text = CoreTools.Translate("Default installation options for {0} packages", Manager.DisplayName);
 
             SettingsTitle.Text = CoreTools.Translate("{0} settings", Manager.DisplayName);
             StatusTitle.Text = CoreTools.Translate("{0} status", Manager.DisplayName);
 
-            var AlwaysElevateManagerOP = new CheckboxCard_Dict()
-            {
-                Text = CoreTools.Translate("Always run {pm} operations with administrator rights").Replace("{pm}", Manager.DisplayName),
-                DictionaryName = "AlwaysElevate",
-                SettingName = Manager.Name,
-                CornerRadius = new CornerRadius(8,8,0,0),
-                BorderThickness = new Thickness(1,1,1,0),
-            };
-
             var DisableNotifsCard = new CheckboxCard_Dict()
             {
                 Text = CoreTools.Translate("Ignore packages from {pm} when showing a notification about updates").Replace("{pm}", Manager.DisplayName),
-                DictionaryName = "DisabledPackageManagerNotifications",
+                DictionaryName = Settings.K.DisabledPackageManagerNotifications,
                 ForceInversion = true,
-                SettingName = Manager.Name
+                KeyName = Manager.Name
             };
 
             ManagerLogsLabel.Text = CoreTools.Translate("View {0} logs", Manager.DisplayName);
+
+            // ----------------- EXECUTABLE FILE PICKER -----------------
+            ExeFileWarningText.Visibility = SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths) ? Visibility.Collapsed : Visibility.Visible;
+            GoToSecureSettingsBtn.Visibility = SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths) ? Visibility.Collapsed : Visibility.Visible;
+            ExecutableComboBox.IsEnabled = SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths);
+            ExecutableComboBox.Items.Clear();
+            foreach(var path in Manager.FindCandidateExecutableFiles())
+            {
+                ExecutableComboBox.Items.Add(path);
+            }
+
+            string selectedValue = Settings.GetDictionaryItem<string, string>(Settings.K.ManagerPaths, Manager.Name) ?? "";
+            if (string.IsNullOrEmpty(selectedValue))
+            {
+                var exe = Manager.GetExecutableFile();
+                selectedValue = exe.Item1? exe.Item2: "";
+            }
+
+            ExecutableComboBox.SelectedValue = selectedValue;
+            ExecutableComboBox.SelectionChanged += ExecutableComboBox_SelectionChanged;
+
+            InstallOptionsPanel.Description = new InstallOptions_Manager(Manager);
 
             // ----------------------- SOURCES CONTROL -------------------
 
             ExtraControls.Children.Clear();
 
-            if(Manager.Capabilities.SupportsCustomSources && Manager is not Vcpkg)
+            if (Manager.Capabilities.SupportsCustomSources && Manager is not Vcpkg)
             {
-                SettingsCard SourceManagerCard = new() {
+                SettingsCard SourceManagerCard = new()
+                {
                     Resources = { ["SettingsCardLeftIndention"] = 10 },
                     CornerRadius = new CornerRadius(8),
-                    Margin = new Thickness(0,0,0,16)
+                    Margin = new Thickness(0, 0, 0, 16)
                 };
                 var man = new SourceManager(Manager);
                 SourceManagerCard.Description = man;
@@ -114,9 +130,8 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
             if (Manager is WinGet)
             {
-                DisableNotifsCard.CornerRadius = new CornerRadius(0);
+                DisableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
-                ExtraControls.Children.Add(AlwaysElevateManagerOP);
                 ExtraControls.Children.Add(DisableNotifsCard);
 
                 ButtonCard WinGet_ResetWindowsIPackageManager = new()
@@ -126,14 +141,14 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     ButtonText = CoreTools.AutoTranslated("Reset"),
                     CornerRadius = new CornerRadius(0)
                 };
-                WinGet_ResetWindowsIPackageManager.Click += (_, _) => { DialogHelper.HandleBrokenWinGet(); };
+                WinGet_ResetWindowsIPackageManager.Click += (_, _) => _ = DialogHelper.HandleBrokenWinGet();
                 ExtraControls.Children.Add(WinGet_ResetWindowsIPackageManager);
 
                 CheckboxCard WinGet_UseBundled = new()
                 {
                     Text =
                         $"{CoreTools.Translate("Use bundled WinGet instead of system WinGet")} ({CoreTools.Translate("This may help if WinGet packages are not shown")})",
-                    SettingName = "ForceLegacyBundledWinGet",
+                    SettingName = Settings.K.ForceLegacyBundledWinGet,
                     CornerRadius = new CornerRadius(0),
                     BorderThickness = new Thickness(1, 0, 1, 0),
                 };
@@ -143,7 +158,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 CheckboxCard WinGet_EnableTroubleshooter = new()
                 {
                     Text = CoreTools.Translate("Enable the automatic WinGet troubleshooter"),
-                    SettingName = "DisableWinGetMalfunctionDetector",
+                    SettingName = Settings.K.DisableWinGetMalfunctionDetector,
                     CornerRadius = new CornerRadius(0),
                 };
                 WinGet_EnableTroubleshooter.StateChanged += (_, _) =>
@@ -156,7 +171,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 CheckboxCard WinGet_EnableTroubleshooter_v2 = new()
                 {
                     Text = CoreTools.Translate("Enable an [experimental] improved WinGet troubleshooter"),
-                    SettingName = "DisableNewWinGetTroubleshooter",
+                    SettingName = Settings.K.DisableNewWinGetTroubleshooter,
                     CornerRadius = new CornerRadius(0),
                     BorderThickness = new Thickness(1, 0, 1, 0),
                 };
@@ -170,7 +185,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 CheckboxCard WinGet_HideNonApplicableUpdates = new()
                 {
                     Text = CoreTools.Translate("Add updates that fail with a 'no applicable update found' to the ignored updates list"),
-                    SettingName = "IgnoreUpdatesNotApplicable",
+                    SettingName = Settings.K.IgnoreUpdatesNotApplicable,
                     CornerRadius = new CornerRadius(0, 0, 8, 8)
                 };
                 ExtraControls.Children.Add(WinGet_HideNonApplicableUpdates);
@@ -180,9 +195,8 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
             else if (Manager is Scoop)
             {
-                DisableNotifsCard.CornerRadius = new CornerRadius(0);
+                DisableNotifsCard.CornerRadius = new CornerRadius(8,8,0,0);
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
-                ExtraControls.Children.Add(AlwaysElevateManagerOP);
                 ExtraControls.Children.Add(DisableNotifsCard);
 
                 ButtonCard Scoop_Install = new()
@@ -193,7 +207,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 };
                 Scoop_Install.Click += (_, _) =>
                 {
-                    CoreTools.LaunchBatchFile(
+                    _ = CoreTools.LaunchBatchFile(
                         Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "install_scoop.cmd"),
                         CoreTools.Translate("Scoop Installer - WingetUI"));
                     RestartRequired?.Invoke(this, new());
@@ -209,7 +223,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 };
                 Scoop_Uninstall.Click += (_, _) =>
                 {
-                    CoreTools.LaunchBatchFile(
+                    _ = CoreTools.LaunchBatchFile(
                         Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "uninstall_scoop.cmd"),
                         CoreTools.Translate("Scoop Uninstaller - WingetUI"));
                     RestartRequired?.Invoke(this, new());
@@ -224,7 +238,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 };
                 Scoop_ResetAppCache.Click += (_, _) =>
                 {
-                    CoreTools.LaunchBatchFile(
+                    _ = CoreTools.LaunchBatchFile(
                         Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "scoop_cleanup.cmd"),
                         CoreTools.Translate("Clearing Scoop cache - WingetUI"), RunAsAdmin: true);
                 };
@@ -234,7 +248,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 {
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
-                    SettingName = "EnableScoopCleanup",
+                    SettingName = Settings.K.EnableScoopCleanup,
                     Text = "Enable Scoop cleanup on launch",
                 };
                 ExtraControls.Children.Add(Scoop_CleanupOnStart);
@@ -243,15 +257,14 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
             else if (Manager is Chocolatey)
             {
-                DisableNotifsCard.CornerRadius = new CornerRadius(0);
+                DisableNotifsCard.CornerRadius = new CornerRadius(8,8,0,0);
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
-                ExtraControls.Children.Add(AlwaysElevateManagerOP);
                 ExtraControls.Children.Add(DisableNotifsCard);
 
                 CheckboxCard Chocolatey_SystemChoco = new()
                 {
                     Text = CoreTools.AutoTranslated("Use system Chocolatey"),
-                    SettingName = "UseSystemChocolatey",
+                    SettingName = Settings.K.UseSystemChocolatey,
                     CornerRadius = new CornerRadius(0, 0, 8, 8)
                 };
                 Chocolatey_SystemChoco.StateChanged += (_, _) => RestartRequired?.Invoke(this, new());
@@ -262,16 +275,15 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
             else if (Manager is Vcpkg)
             {
-                DisableNotifsCard.CornerRadius = new CornerRadius(0);
+                DisableNotifsCard.CornerRadius = new CornerRadius(8,8,0,0);
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
-                ExtraControls.Children.Add(AlwaysElevateManagerOP);
                 ExtraControls.Children.Add(DisableNotifsCard);
 
-                Settings.SetValue("DefaultVcpkgTriplet", Vcpkg.GetDefaultTriplet());
+                Settings.SetValue(Settings.K.DefaultVcpkgTriplet, Vcpkg.GetDefaultTriplet());
                 ComboboxCard Vcpkg_DefaultTriplet = new()
                 {
                     Text = CoreTools.Translate("Default vcpkg triplet"),
-                    SettingName = "DefaultVcpkgTriplet",
+                    SettingName = Settings.K.DefaultVcpkgTriplet,
                     CornerRadius = new CornerRadius(0)
                 };
                 foreach (string triplet in Vcpkg.GetSystemTriplets())
@@ -294,23 +306,23 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 var ResetVcPkgRootLabel = new HyperlinkButton { Content = CoreTools.Translate("Reset") };
                 var OpenVcPkgRootLabel = new HyperlinkButton { Content = CoreTools.Translate("Open") };
 
-                VcPkgRootLabel.Text = Settings.Get("CustomVcpkgRoot")
-                    ? Settings.GetValue("CustomVcpkgRoot")
+                VcPkgRootLabel.Text = Settings.Get(Settings.K.CustomVcpkgRoot)
+                    ? Settings.GetValue(Settings.K.CustomVcpkgRoot)
                     : "%VCPKG_ROOT%";
-                OpenVcPkgRootLabel.IsEnabled = Settings.Get("CustomVcpkgRoot");
-                ResetVcPkgRootLabel.IsEnabled = Settings.Get("CustomVcpkgRoot");
+                OpenVcPkgRootLabel.IsEnabled = Settings.Get(Settings.K.CustomVcpkgRoot);
+                ResetVcPkgRootLabel.IsEnabled = Settings.Get(Settings.K.CustomVcpkgRoot);
 
                 ResetVcPkgRootLabel.Click += (_, _) =>
                 {
                     VcPkgRootLabel.Text = "%VCPKG_ROOT%";
-                    Settings.Set("CustomVcpkgRoot", false);
+                    Settings.Set(Settings.K.CustomVcpkgRoot, false);
                     ResetVcPkgRootLabel.IsEnabled = false;
                     OpenVcPkgRootLabel.IsEnabled = false;
                 };
 
                 OpenVcPkgRootLabel.Click += (_, _) =>
                 {
-                    string directory = Settings.GetValue("CustomVcpkgRoot").Replace("/", "\\");
+                    string directory = Settings.GetValue(Settings.K.CustomVcpkgRoot).Replace("/", "\\");
                     if (directory.Any()) Process.Start("explorer.exe", directory);
                 };
 
@@ -321,7 +333,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     string folder = openPicker.Show();
                     if (folder != string.Empty)
                     {
-                        Settings.SetValue("CustomVcpkgRoot", folder);
+                        Settings.SetValue(Settings.K.CustomVcpkgRoot, folder);
                         VcPkgRootLabel.Text = folder;
                         ResetVcPkgRootLabel.IsEnabled = true;
                         OpenVcPkgRootLabel.IsEnabled = true;
@@ -339,13 +351,23 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             // -------------------------------- DEFAULT EXTRA SETTINGS --------------------------------------
             else
             {
-                DisableNotifsCard.CornerRadius = new CornerRadius(0, 0, 8, 8);
+                DisableNotifsCard.CornerRadius = new CornerRadius(8);
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 1);
-                ExtraControls.Children.Add(AlwaysElevateManagerOP);
                 ExtraControls.Children.Add(DisableNotifsCard);
             }
 
-                base.OnNavigatedTo(e);
+            // Hide the AppExecutionAliasWarning element if Manager is not Pip
+            if (Manager is Pip)
+            {
+                ManagerLogs.CornerRadius = new CornerRadius(8, 8, 0, 0);
+                AppExecutionAliasWarningLabel.Text = "If Python cannot be found or is not listing packages but is installed on the system, you may need to disable the \"python.exe\" App Execution Alias in the settings.";
+            }
+            else
+            {
+                AppExecutionAliasWarning.Visibility = Visibility.Collapsed;
+            }
+
+            base.OnNavigatedTo(e);
         }
 
         private void ShowVersionHyperlink_Click(object sender, RoutedEventArgs e)
@@ -364,7 +386,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 if (!Manager.Status.Version.Contains('\n'))
                 {
                     ManagerStatusBar.Message =
-                        CoreTools.Translate("{pm} version:", new Dictionary<string, object?> {{ "pm", Manager.DisplayName }}) + $" {Manager.Status.Version}";
+                        CoreTools.Translate("{pm} version:", new Dictionary<string, object?> { { "pm", Manager.DisplayName } }) + $" {Manager.Status.Version}";
                 }
                 else if (ShowVersion)
                 {
@@ -397,7 +419,8 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             }
         }
 
-        private async void ManagerPath_Click(object sender, RoutedEventArgs e)
+        private void ManagerPath_Click(object sender, RoutedEventArgs e) => _ = _managerPath_Click();
+        private async Task _managerPath_Click()
         {
             WindowsClipboard.SetText(LocationLabel.Text);
             CopyButtonIcon.Symbol = Symbol.Accept;
@@ -408,6 +431,20 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         private void ManagerLogs_Click(object sender, RoutedEventArgs e)
         {
             MainApp.Instance.MainWindow.NavigationPage.OpenManagerLogs(Manager as IPackageManager);
+        }
+
+        private void ExecutableComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(ExecutableComboBox.SelectedValue.ToString()))
+                return;
+
+            Settings.SetDictionaryItem(Settings.K.ManagerPaths, Manager!.Name, ExecutableComboBox.SelectedValue.ToString());
+            RestartRequired?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void GoToSecureSettingsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            MainApp.Instance.MainWindow.NavigationPage.OpenSettingsPage(typeof(Administrator));
         }
     }
 }

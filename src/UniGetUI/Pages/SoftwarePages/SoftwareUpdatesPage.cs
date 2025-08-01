@@ -1,6 +1,8 @@
 using Windows.Networking.Connectivity;
+using Windows.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
 using Microsoft.Windows.System.Power;
@@ -34,6 +36,7 @@ namespace UniGetUI.Interface.SoftwarePages
             DisableFilterOnQueryChange = false,
             MegaQueryBlockEnabled = false,
             ShowLastLoadTime = true,
+            DisableReload = false,
             PackagesAreCheckedByDefault = true,
             DisableSuggestedResultsRadio = true,
             PageName = "Updates",
@@ -67,11 +70,11 @@ namespace UniGetUI.Interface.SoftwarePages
 
             BetterMenuItem menuInstallSettings = new()
             {
-                Text = CoreTools.AutoTranslated("Installation options"),
+                Text = CoreTools.AutoTranslated("Update options"),
                 IconName = IconType.Options,
                 KeyboardAcceleratorTextOverride = "Alt+Enter"
             };
-            menuInstallSettings.Click += (_, _) => ShowInstallationOptionsForPackage(SelectedItem);
+            menuInstallSettings.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
             MenuOpenInstallLocation = new()
             {
@@ -153,7 +156,7 @@ namespace UniGetUI.Interface.SoftwarePages
 
             MenuFlyoutSubItem menuPause = new()
             {
-                Text = "Pause updates for",
+                Text = CoreTools.Translate("Pause updates for"),
                 Icon = new FontIcon { Glyph = "\uE769" },
             };
             foreach (IgnoredUpdatesDatabase.PauseTime menuTime in new List<IgnoredUpdatesDatabase.PauseTime>{
@@ -222,10 +225,27 @@ namespace UniGetUI.Interface.SoftwarePages
 
         public override void GenerateToolBar()
         {
-            AppBarButton UpdateSelected = new();
-            AppBarButton UpdateAsAdmin = new();
-            AppBarButton UpdateSkipHash = new();
-            AppBarButton UpdateInteractive = new();
+            BetterMenuItem UpdateAsAdmin = new();
+            BetterMenuItem UpdateSkipHash = new();
+            BetterMenuItem UpdateInteractive = new();
+            BetterMenuItem DownloadInstallers = new();
+            BetterMenuItem UninstallSelection = new();
+
+            MainToolbarButtonDropdown.Flyout = new BetterMenu()
+            {
+                Items = {
+                    UpdateAsAdmin,
+                    UpdateSkipHash,
+                    UpdateInteractive,
+                    new MenuFlyoutSeparator(),
+                    DownloadInstallers,
+                    new MenuFlyoutSeparator(),
+                    UninstallSelection
+                },
+                Placement = FlyoutPlacementMode.Bottom
+            };
+            MainToolbarButtonIcon.Icon = IconType.Update;
+            MainToolbarButtonText.Text = CoreTools.Translate("Update selection");
 
             AppBarButton InstallationSettings = new();
 
@@ -237,10 +257,6 @@ namespace UniGetUI.Interface.SoftwarePages
 
             AppBarButton HelpButton = new();
 
-            ToolBar.PrimaryCommands.Add(UpdateSelected);
-            ToolBar.PrimaryCommands.Add(UpdateAsAdmin);
-            ToolBar.PrimaryCommands.Add(UpdateSkipHash);
-            ToolBar.PrimaryCommands.Add(UpdateInteractive);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(InstallationSettings);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
@@ -252,14 +268,15 @@ namespace UniGetUI.Interface.SoftwarePages
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(HelpButton);
 
-            Dictionary<AppBarButton, string> Labels = new()
+            Dictionary<DependencyObject, string> Labels = new()
             { // Entries with a leading space are collapsed
               // Their texts will be used as the tooltip
-                { UpdateSelected,       CoreTools.Translate("Update selected packages") },
-                { UpdateAsAdmin,        " " + CoreTools.Translate("Update as administrator") },
-                { UpdateSkipHash,       " " + CoreTools.Translate("Skip integrity checks") },
-                { UpdateInteractive,    " " + CoreTools.Translate("Interactive update") },
-                { InstallationSettings, " " + CoreTools.Translate("Installation options") },
+                { UpdateAsAdmin,        CoreTools.Translate("Update as administrator") },
+                { UpdateSkipHash,       CoreTools.Translate("Skip integrity checks") },
+                { UpdateInteractive,    CoreTools.Translate("Interactive update") },
+                { DownloadInstallers,   CoreTools.Translate("Download selected installers") },
+                { UninstallSelection,   CoreTools.Translate("Uninstall selected packages") },
+                { InstallationSettings, " " + CoreTools.Translate("Update options") },
                 { PackageDetails,       " " + CoreTools.Translate("Package details") },
                 { SharePackage,         " " + CoreTools.Translate("Share") },
                 { IgnoreSelected,       CoreTools.Translate("Ignore selected packages") },
@@ -267,26 +284,15 @@ namespace UniGetUI.Interface.SoftwarePages
                 { HelpButton,           CoreTools.Translate("Help") }
             };
 
-            foreach (AppBarButton toolButton in Labels.Keys)
-            {
-                toolButton.IsCompact = Labels[toolButton][0] == ' ';
-                if (toolButton.IsCompact)
-                {
-                    toolButton.LabelPosition = CommandBarLabelPosition.Collapsed;
-                }
 
-                string text = Labels[toolButton].Trim();
-                toolButton.Label = text;
-                ToolTipService.SetToolTip(toolButton, text);
-            }
-
-            Dictionary<AppBarButton, IconType> Icons = new()
+            Dictionary<DependencyObject, IconType> Icons = new()
             {
-                { UpdateSelected,       IconType.Update },
                 { UpdateAsAdmin,        IconType.UAC },
                 { UpdateSkipHash,       IconType.Checksum },
                 { UpdateInteractive,    IconType.Interactive },
                 { InstallationSettings, IconType.Options },
+                { DownloadInstallers,   IconType.Download },
+                { UninstallSelection,   IconType.Delete },
                 { PackageDetails,       IconType.Info_Round },
                 { SharePackage,         IconType.Share },
                 { IgnoreSelected,       IconType.Pin },
@@ -294,14 +300,11 @@ namespace UniGetUI.Interface.SoftwarePages
                 { HelpButton,           IconType.Help }
             };
 
-            foreach (AppBarButton toolButton in Icons.Keys)
-            {
-                toolButton.Icon = new LocalIcon(Icons[toolButton]);
-            }
+            ApplyTextAndIconsToToolbar(Labels, Icons);
 
             PackageDetails.Click += (_, _) => ShowDetailsForPackage(SelectedItem, TEL_InstallReferral.ALREADY_INSTALLED);
             HelpButton.Click += (_, _) => MainApp.Instance.MainWindow.NavigationPage.ShowHelp();
-            InstallationSettings.Click += (_, _) => ShowInstallationOptionsForPackage(SelectedItem);
+            InstallationSettings.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
             ManageIgnored.Click += async (_, _) => await DialogHelper.ManageIgnoredUpdates();
             IgnoreSelected.Click += async (_, _) =>
             {
@@ -313,11 +316,13 @@ namespace UniGetUI.Interface.SoftwarePages
                 }
             };
 
-            UpdateSelected.Click += (_, _) => MainApp.Operations.Update(FilteredPackages.GetCheckedPackages());
+            MainToolbarButton.Click += (_, _) => MainApp.Operations.Update(FilteredPackages.GetCheckedPackages());
             UpdateAsAdmin.Click += (_, _) => MainApp.Operations.Update(FilteredPackages.GetCheckedPackages(), elevated: true);
             UpdateSkipHash.Click += (_, _) => MainApp.Operations.Update(FilteredPackages.GetCheckedPackages(), no_integrity: true);
             UpdateInteractive.Click += (_, _) => MainApp.Operations.Update(FilteredPackages.GetCheckedPackages(), interactive: true);
-            SharePackage.Click += (_, _) => MainApp.Instance.MainWindow.SharePackage(SelectedItem);
+            DownloadInstallers.Click += (_, _) => _ = MainApp.Operations.Download(FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.ALREADY_INSTALLED);
+            UninstallSelection.Click += (_, _) => _ = MainApp.Operations.ConfirmAndUninstall(FilteredPackages.GetCheckedPackages());
+            SharePackage.Click += (_, _) => DialogHelper.SharePackage(SelectedItem);
         }
 
         protected override void WhenPackageCountUpdated()
@@ -339,18 +344,18 @@ namespace UniGetUI.Interface.SoftwarePages
                 if (upgradablePackages.Count == 0)
                     return;
 
-                bool EnableAutoUpdate = Settings.Get("AutomaticallyUpdatePackages");
+                bool EnableAutoUpdate = Settings.Get(Settings.K.AutomaticallyUpdatePackages);
 
                 if (EnableAutoUpdate)
                 {
                     var connectionCost = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost().NetworkCostType;
-                    if (connectionCost is NetworkCostType.Fixed or NetworkCostType.Variable && Settings.Get("DisableAUPOnMeteredConnections"))
+                    if (connectionCost is NetworkCostType.Fixed or NetworkCostType.Variable && Settings.Get(Settings.K.DisableAUPOnMeteredConnections))
                     {
                         Logger.Warn("Updates will not be installed automatically because the current internet connection is metered.");
                         EnableAutoUpdate = false;
                     }
 
-                    if (PowerManager.EnergySaverStatus is EnergySaverStatus.On && Settings.Get("DisableAUPOnBatterySaver"))
+                    if (PowerManager.EnergySaverStatus is EnergySaverStatus.On && Settings.Get(Settings.K.DisableAUPOnBatterySaver))
                     {
                         Logger.Warn("Updates will not be installed automatically because battery saver is enabled.");
                         EnableAutoUpdate = false;
@@ -365,9 +370,7 @@ namespace UniGetUI.Interface.SoftwarePages
 
 
                 if(EnableAutoUpdate)
-                {
-                    MainApp.Operations.UpdateAll();
-                }
+                    _ = MainApp.Operations.UpdateAll();
 
                 if (Settings.AreUpdatesNotificationsDisabled())
                     return;
@@ -419,7 +422,7 @@ namespace UniGetUI.Interface.SoftwarePages
                     string attribution = "";
                     foreach (IPackage package in upgradablePackages)
                     {
-                        if (!Settings.GetDictionaryItem<string, bool>("DisabledPackageManagerNotifications", package.Manager.Name))
+                        if (!Settings.GetDictionaryItem<string, bool>(Settings.K.DisabledPackageManagerNotifications, package.Manager.Name))
                             attribution += package.Name + ", ";
                     }
 
@@ -464,7 +467,7 @@ namespace UniGetUI.Interface.SoftwarePages
                 bool SendNotification = false;
                 foreach (var Package in upgradablePackages)
                 {
-                    if (!Settings.GetDictionaryItem<string, bool>("DisabledPackageManagerNotifications", Package.Manager.Name))
+                    if (!Settings.GetDictionaryItem<string, bool>(Settings.K.DisabledPackageManagerNotifications, Package.Manager.Name))
                     {
                         SendNotification = true;
                         break;
@@ -494,11 +497,8 @@ namespace UniGetUI.Interface.SoftwarePages
         private void MenuAsAdmin_Invoked(object sender, RoutedEventArgs e)
             => _ = MainApp.Operations.Update(SelectedItem, elevated: true);
 
-        private async void MenuUpdateAfterUninstall_Invoked(object sender, RoutedEventArgs e)
-        {
-            var op = await MainApp.Operations.Uninstall(SelectedItem);
-            _ = MainApp.Operations.Install(SelectedItem, TEL_InstallReferral.ALREADY_INSTALLED, req: op);
-        }
+        private void MenuUpdateAfterUninstall_Invoked(object sender, RoutedEventArgs e)
+            => _ = MainApp.Operations.UninstallThenUpdate(SelectedItem);
 
         private void MenuUninstall_Invoked(object sender, RoutedEventArgs e)
             => _ = MainApp.Operations.Uninstall(SelectedItem);
@@ -538,7 +538,7 @@ namespace UniGetUI.Interface.SoftwarePages
         {
         }
 
-        public async void UpdateAllPackagesForManager(string manager)
+        public void UpdateAllPackagesForManager(string manager)
         {
         }
     }

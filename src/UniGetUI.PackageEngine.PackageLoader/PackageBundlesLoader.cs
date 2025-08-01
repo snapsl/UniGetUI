@@ -32,14 +32,21 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         protected override Task WhenAddingPackage(IPackage package)
         {
-            if (package.GetInstalledPackage() is not null)
+            if (package.NewerVersionIsInstalled())
+            {
                 package.SetTag(PackageTag.AlreadyInstalled);
+            }
+            else if (package.GetUpgradablePackage() is not null)
+            {
+                package.SetTag(PackageTag.IsUpgradable);
+            }
 
             return Task.CompletedTask;
         }
 
         public async Task AddPackagesAsync(IReadOnlyList<IPackage> foreign_packages)
         {
+            List<IPackage> added = new();
             foreach (IPackage foreign in foreign_packages)
             {
                 IPackage? package = null;
@@ -54,7 +61,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     else
                     {
                         Logger.Debug($"Adding native package with id={native.Id} to bundle as a VALID package...");
-                        package = new ImportedPackage(await Task.Run(native.AsSerializable), native.Manager, native.Source);
+                        package = new ImportedPackage(await native.AsSerializableAsync(), native.Manager, native.Source);
                     }
                 }
                 else if (foreign is ImportedPackage imported)
@@ -71,9 +78,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 {
                     Logger.Error($"An IPackage instance id={foreign.Id} did not match the types Package, ImportedPackage or InvalidImportedPackage. This should never be the case");
                 }
-                if (package is not null && !Contains(package)) AddPackage(package);
+
+                if (package is not null)
+                {   // Here, AddForeign is not used so a single PackagesChangedEvent can be invoked.
+                    await AddPackage(package);
+                    added.Add(package);
+                }
             }
-            InvokePackagesChangedEvent(true, foreign_packages, []);
+            InvokePackagesChangedEvent(true, added, []);
         }
 
         public void RemoveRange(IReadOnlyList<IPackage> packages)

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
@@ -14,6 +13,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
+using Architecture = UniGetUI.PackageEngine.Enums.Architecture;
 
 namespace UniGetUI.PackageEngine.Managers.WingetManager
 {
@@ -30,11 +30,11 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         public LocalWinGetSource MicrosoftStoreSource { get; }
         public static bool NO_PACKAGES_HAVE_BEEN_LOADED { get; private set; }
 
-        public string WinGetBundledPath;
+        public static string BundledWinGetPath = "";
 
         public WinGet()
         {
-            WinGetBundledPath = Path.Join(CoreData.UniGetUIExecutableDirectory, "winget-cli_x64", "winget.exe");
+            BundledWinGetPath = Path.Join(CoreData.UniGetUIExecutableDirectory, "winget-cli_x64", "winget.exe");
 
             Capabilities = new ManagerCapabilities
             {
@@ -43,8 +43,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 CanRunInteractively = true,
                 SupportsCustomVersions = true,
                 CanDownloadInstaller = true,
+                CanListDependencies = true,
                 SupportsCustomArchitectures = true,
-                SupportedCustomArchitectures = [Architecture.X86, Architecture.X64, Architecture.Arm64],
+                SupportedCustomArchitectures = [Architecture.x86, Architecture.x64, Architecture.arm64],
                 SupportsCustomScopes = true,
                 SupportsCustomLocations = true,
                 SupportsCustomSources = true,
@@ -71,7 +72,6 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 InstallVerb = "install",
                 UninstallVerb = "uninstall",
                 UpdateVerb = "update",
-                ExecutableCallArgs = "",
                 KnownSources = [ new ManagerSource(this, "winget", new Uri("https://cdn.winget.microsoft.com/cache")),
                                  new ManagerSource(this, "msstore", new Uri("https://storeedgefd.dsx.mp.microsoft.com/v9.0")) ],
                 DefaultSource = new ManagerSource(this, "winget", new Uri("https://cdn.winget.microsoft.com/cache"))
@@ -91,16 +91,16 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         public static string GetProxyArgument()
         {
-            if (!Settings.Get("EnableProxy")) return "";
+            if (!Settings.Get(Settings.K.EnableProxy)) return "";
             var proxyUri = Settings.GetProxyUrl();
             if (proxyUri is null) return "";
 
-            if (Settings.Get("EnableProxyAuth"))
+            if (Settings.Get(Settings.K.EnableProxyAuth))
             {
                 Logger.Warn("Proxy is enabled, but WinGet does not support proxy authentication, so the proxy setting will be ignored");
                 return "";
             }
-            return $"--proxy {proxyUri.ToString()[..^1]}";
+            return $"--proxy {proxyUri.ToString().TrimEnd('/')}";
         }
 
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
@@ -110,7 +110,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
-            return WinGetHelper.Instance.GetAvailableUpdates_UnSafe();
+            return WinGetHelper.Instance.GetAvailableUpdates_UnSafe().Where(p => p.Id != "Chocolatey.Chocolatey").ToArray();
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
@@ -173,26 +173,35 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             return LocalPcSource;
         }
 
+        public override IReadOnlyList<string> FindCandidateExecutableFiles()
+        {
+            List<string> candidates = new();
+            if (!Settings.Get(Settings.K.ForceLegacyBundledWinGet))
+            {
+                candidates.AddRange(CoreTools.WhichMultiple("winget.exe"));
+            }
+
+            candidates.Add(BundledWinGetPath);
+            return candidates;
+        }
+
         protected override ManagerStatus LoadManager()
         {
-            ManagerStatus status = new();
 
-            bool FORCE_BUNDLED = Settings.Get("ForceLegacyBundledWinGet");
+            bool FORCE_BUNDLED = Settings.Get(Settings.K.ForceLegacyBundledWinGet);
+            var (found, path) = GetExecutableFile();
 
-            var (found, path) = CoreTools.Which("winget.exe");
-            status.ExecutablePath = path;
-            status.Found = found;
+            ManagerStatus status = new()
+            {
+                ExecutablePath = path,
+                ExecutableCallArgs = "",
+                Found = found,
+            };
 
-            if (!status.Found)
+            if (found && status.ExecutablePath == BundledWinGetPath && !FORCE_BUNDLED)
             {
                 Logger.Error("User does not have WinGet installed, forcing bundled WinGet...");
                 FORCE_BUNDLED = true;
-            }
-
-            if (FORCE_BUNDLED)
-            {
-                status.ExecutablePath = WinGetBundledPath;
-                status.Found = File.Exists(WinGetBundledPath);
             }
 
             if (!status.Found)
@@ -207,7 +216,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = status.ExecutablePath,
-                    Arguments = Properties.ExecutableCallArgs + " --version",
+                    Arguments = status.ExecutableCallArgs + " --version",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -290,7 +299,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         private static void TryRepairTempFolderPermissions()
         {
-            if (Settings.Get("DisableNewWinGetTroubleshooter")) return;
+            if (Settings.Get(Settings.K.DisableNewWinGetTroubleshooter)) return;
 
             try
             {
@@ -348,7 +357,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Properties.ExecutableCallArgs + " source update --disable-interactivity " + WinGet.GetProxyArgument(),
+                    Arguments = Status.ExecutableCallArgs + " source update --disable-interactivity " + GetProxyArgument(),
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -389,7 +398,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             Ubisoft
         }
 
-        public readonly Type_t Type;   
+        public readonly Type_t Type;
         private readonly string name;
         private readonly IconType __icon_id;
         public override IconType IconId { get => __icon_id; }

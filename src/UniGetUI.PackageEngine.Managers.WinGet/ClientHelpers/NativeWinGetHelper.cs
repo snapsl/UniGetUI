@@ -66,7 +66,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             ConnectResult result = CatalogReference.Connect();
             if (result.Status == ConnectResultStatus.Ok)
             {
-                foreach (var filter_type in new PackageMatchField[] { PackageMatchField.Name, PackageMatchField.Id, PackageMatchField.Moniker })
+                foreach (var filter_type in new[] { PackageMatchField.Name, PackageMatchField.Id, PackageMatchField.Moniker })
                 {
                     FindPackagesOptions PackageFilters = Factory.CreateFindPackagesOptions();
 
@@ -194,9 +194,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         foreach (var nativePackage in TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(GetLocalWinGetPackages, 15))
         {
             IManagerSource source;
-            if (nativePackage.DefaultInstallVersion is not null && nativePackage.DefaultInstallVersion.PackageCatalog is not null)
+            var availableVersions = nativePackage.AvailableVersions?.ToArray() ?? [];
+            if (availableVersions.Length > 0)
             {
-                source = Manager.SourcesHelper.Factory.GetSourceOrDefault(nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name);
+                var installPackage = nativePackage.GetPackageVersionInfo(availableVersions[0]);
+                source = Manager.SourcesHelper.Factory.GetSourceOrDefault(installPackage.PackageCatalog.Info.Name);
             }
             else
             {
@@ -356,8 +358,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         List<string> output = [];
         ProcessStartInfo startInfo = new()
         {
-            FileName = Manager.WinGetBundledPath,
-            Arguments = Manager.Properties.ExecutableCallArgs + " show " + WinGetPkgOperationHelper.GetIdNamePiece(details.Package) +
+            FileName = WinGet.BundledWinGetPath,
+            Arguments = Manager.Status.ExecutableCallArgs + " show " + WinGetPkgOperationHelper.GetIdNamePiece(details.Package) +
                         " --disable-interactivity --accept-source-agreements --source " +
                         details.Package.Source.Name,
             RedirectStandardOutput = true,
@@ -394,6 +396,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
         logger.Error(process.StandardError.ReadToEnd());
 
+        bool capturingDependencies = false;
+        details.Dependencies.Clear();
         // Parse the output
         foreach (string __line in output)
         {
@@ -407,7 +411,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 else if (line.Contains("Installer Url:"))
                 {
                     details.InstallerUrl = new Uri(line.Replace("Installer Url:", "").Trim());
-                    details.InstallerSize = CoreTools.GetFileSize(details.InstallerUrl);
+                    details.InstallerSize = CoreTools.GetFileSizeAsLong(details.InstallerUrl);
                 }
                 else if (line.Contains("Release Date:"))
                 {
@@ -417,6 +421,20 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 {
                     details.InstallerType = line.Split(":")[1].Trim();
                 }
+                else if (line.Contains("- Package Dependencies"))
+                {
+                    capturingDependencies = true;
+                }
+                else if (__line.Contains("        ") && capturingDependencies)
+                {
+                    details.Dependencies.Add(new()
+                    {
+                        Name = line.Split(' ')[0],
+                        Version = line.Contains('[') ? line.Split('[')[1].TrimEnd(']'): "",
+                        Mandatory = true
+                    });
+                }
+                else if (!__line.Contains("        ")) capturingDependencies = false;
             }
             catch (Exception e)
             {
