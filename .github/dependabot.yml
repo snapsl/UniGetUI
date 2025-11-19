@@ -8,3 +8,11 @@ updates:
       actions-deps:
         patterns:
           - "*"
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-nuget-updates:
+        patterns:
+          - "*"
