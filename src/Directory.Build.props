@@ -11,6 +11,7 @@
         <Authors>Martí Climent and the contributors</Authors>
         <PublisherName>Martí Climent</PublisherName>
         <Nullable>enable</Nullable>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
     </PropertyGroup>
 
     <PropertyGroup>
