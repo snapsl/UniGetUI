@@ -9,6 +9,7 @@
     <StartupObject>UniGetUI.EntryPoint</StartupObject>
     <SignAssembly>False</SignAssembly>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
 
     <!-- .NET & AppSdk publish options -->
     <WindowsAppSDKWinUI>true</WindowsAppSDKWinUI>
