@@ -11,22 +11,22 @@
   </PropertyGroup>
 
   <!--
-  CsWinRT properties:
+  CsWinRT properties (only evaluated on Windows build hosts):
   https://github.com/microsoft/CsWinRT/blob/master/nuget/readme.md
   -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <CsWinRTWindowsMetadata>10.0.19041.0</CsWinRTWindowsMetadata>
     <CsWinRTIncludes>Microsoft.Management.Deployment</CsWinRTIncludes>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <CsWinRTInputs Include="$(TargetDir)\Microsoft.Management.Deployment.winmd" />
     <Content Include="$(TargetDir)\Microsoft.Management.Deployment.winmd" Link="Microsoft.Management.Deployment.winmd" CopyToOutputDirectory="PreserveNewest" />
     <!--Content Include="$(TargetDir)\winrtact.dll" Link="winrtact.dll" CopyToOutputDirectory="PreserveNewest" /-->
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
+    <PackageReference Condition="'$(OS)' == 'Windows_NT'" Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
     <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
@@ -57,7 +57,7 @@
     </PackageReference>
   </ItemGroup>
 
-  <Target Name="CopyWinmdToTargetDir" BeforeTargets="BeforeBuild">
+  <Target Condition="'$(OS)' == 'Windows_NT'" Name="CopyWinmdToTargetDir" BeforeTargets="BeforeBuild">
     <Copy SourceFiles="$(PkgMicrosoft_WindowsPackageManager_InProcCom)\lib\Microsoft.Management.Deployment.winmd" DestinationFolder="$(TargetDir)" />
     <!--Copy SourceFiles="$(PkgMicrosoft_WindowsPackageManager_ComInterop)\runtimes\win10-$(Platform)\native\winrtact.dll" DestinationFolder="$(TargetDir)" /-->
   </Target>
